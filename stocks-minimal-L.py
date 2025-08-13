@@ -6,6 +6,7 @@ Supports analysis of:
 - S&P 500 index
 - NASDAQ-100 index  
 - Berkshire Hathaway stock
+- Bitcoin (BTC)
 - Other stocks/indices via CSV files
 
 Logic:
@@ -23,6 +24,7 @@ Usage:
   python stocks-minimal-L.py
   python stocks-minimal-L.py --data-source nasdaq100
   python stocks-minimal-L.py --data-source brk --baselines 1990 2000 2010
+  python stocks-minimal-L.py --data-source btc
 
 Output is printed to stdout.
 
@@ -54,7 +56,8 @@ DEFAULT_TOL = 1e-9
 DATA_SOURCES = {
     'sp500': 'data/sp500-history.csv',
     'nasdaq100': 'data/ndsq100-history.csv',
-    'brk': 'data/brk-history.csv'
+    'brk': 'data/brk-history.csv',
+    'btc': 'data/btc-history.csv'
 }
 
 # ----------------- I/O & parsing -----------------
@@ -635,8 +638,8 @@ def generate_html_report(all_results: Dict[str, List[Dict[str, Any]]], output_fi
 
 def main():
     ap = argparse.ArgumentParser(description="Analyze index/stock annual returns by historical baselines.")
-    ap.add_argument("--data-source", choices=['sp500', 'nasdaq100', 'brk', 'all'], default='all',
-                    help="Data source to analyze: sp500 (S&P 500), nasdaq100 (NASDAQ-100), brk (Berkshire Hathaway), or all (default: all)")
+    ap.add_argument("--data-source", choices=['sp500', 'nasdaq100', 'brk', 'btc', 'all'], default='all',
+                    help="Data source to analyze: sp500 (S&P 500), nasdaq100 (NASDAQ-100), brk (Berkshire Hathaway), btc (Bitcoin), or all (default: all)")
     ap.add_argument("--csv-url", default=None,
                     help="CSV URL for remote data (optional, S&P 500 only)")
     ap.add_argument("--baselines", type=int, nargs="+", default=None,
@@ -648,7 +651,7 @@ def main():
     
     # Determine which data sources to analyze
     if args.data_source == 'all':
-        data_sources = ['sp500', 'nasdaq100', 'brk']
+        data_sources = ['sp500', 'nasdaq100', 'brk', 'btc']
     else:
         data_sources = [args.data_source]
     
@@ -665,6 +668,8 @@ def main():
                 baselines = [1986, 1995, 2000, 2010]  # NASDAQ-100 started in 1985
             elif data_source == 'brk':
                 baselines = [1981, 1990, 2000, 2010]  # Berkshire data starts from 1981
+            elif data_source == 'btc':
+                baselines = [2014, 2017, 2020, 2022]  # Bitcoin data starts from 2014
         else:
             baselines = args.baselines
         
@@ -699,7 +704,8 @@ def main():
         source_names = {
             'sp500': 'S&P 500',
             'nasdaq100': 'NASDAQ-100',
-            'brk': 'Berkshire Hathaway'
+            'brk': 'Berkshire Hathaway',
+            'btc': 'Bitcoin (BTC)'
         }
         source_name = source_names.get(data_source, data_source.upper())
         print(f"\n{'='*60}")

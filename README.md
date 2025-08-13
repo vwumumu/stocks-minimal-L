@@ -2,7 +2,7 @@
 
 原始代码分叉自 https://github.com/xiaolai/sp500-minimal-L
 
-该脚本分析标普500、纳斯达克100或伯克希尔哈撒韦的年度收益率，使用历史基准线执行两个主要任务：
+该脚本分析标普500、纳斯达克100、伯克希尔哈撒韦或比特币的年度收益率，使用历史基准线执行两个主要任务：
 
 ## 任务
 
@@ -11,11 +11,12 @@
 
 ## 数据源
 
-脚本支持三种不同的指数/股票：
+脚本支持四种不同的指数/股票：
 
 1. **标普500** (`data/sp500-history.csv`)：默认选项，数据从1926年至今
 2. **纳斯达克100** (`data/ndsq100-history.csv`)：数据从1986年至今  
 3. **伯克希尔哈撒韦** (`data/brk-history.csv`)：数据从1981年至今
+4. **比特币** (`data/btc-history.csv`)：数据从2014年至今
 
 对于每个数据源，脚本将：
 1. 首先尝试从 `data/` 文件夹加载相应的本地CSV文件
@@ -30,7 +31,7 @@ pip3 install -r requirements.txt
 
 ## 使用方法
 
-### 基本用法（分析所有三个数据源）：
+### 基本用法（分析所有四个数据源）：
 ```bash
 python3 stocks-minimal-L.py
 ```
@@ -48,6 +49,11 @@ python3 stocks-minimal-L.py --data-source nasdaq100
 ### 仅分析伯克希尔哈撒韦：
 ```bash
 python3 stocks-minimal-L.py --data-source brk
+```
+
+### 仅分析比特币：
+```bash
+python3 stocks-minimal-L.py --data-source btc
 ```
 
 ### 使用自定义参数分析特定数据源：
@@ -68,12 +74,13 @@ python3 stocks-minimal-L.py \
 
 ## 参数
 
-- `--data-source`：选择数据源：`sp500`、`nasdaq100`、`brk`或`all`（默认：all）
+- `--data-source`：选择数据源：`sp500`、`nasdaq100`、`brk`、`btc`或`all`（默认：all）
 - `--csv-url`：远程数据的CSV URL（可选，仅限标普500）
 - `--baselines`：要分析的基准年份列表
   - 标普500默认：[1926, 1957, 1972, 1984]
   - 纳斯达克100默认：[1986, 1995, 2000, 2010]
   - 伯克希尔哈撒韦默认：[1981, 1990, 2000, 2010]
+  - 比特币默认：[2014, 2017, 2020, 2022]
 - `--taus`：年化收益率离散度阈值列表，十进制表示（默认：[0.005, 0.01, 0.015]）
 - `--tol`：比较容差（默认：1e-9）
 
@@ -98,6 +105,12 @@ python3 stocks-minimal-L.py \
 - **1990**：沃伦·巴菲特成熟管理期
 - **2000**：千年/科技泡沫时期表现
 - **2010**：金融危机后表现
+
+#### 比特币基准
+- **2014**：接近数据可用起点，早期采用阶段
+- **2017**：第一次主流关注和泡沫期前夕
+- **2020**：机构采用开始，减半后牛市
+- **2022**：市场成熟期，高点回调后
 
 这些基准有助于分析：
 - 从市场高点开始的表现（最差时机）
@@ -137,19 +150,20 @@ HTML报告在每次分析后自动生成，并保存为当前目录中的 `repor
 1. **标题格式**：包含列标题的CSV，包括"Year"和收益率列
 2. **无标题格式**：没有标题的CSV，每行包含年份和收益率值（如 `2024,25.02`）
 
-`data/` 文件夹中的所有本地CSV文件（`sp500-history.csv`、`ndsq100-history.csv`、`brk-history.csv`）为简化起见使用无标题格式。
+`data/` 文件夹中的所有本地CSV文件（`sp500-history.csv`、`ndsq100-history.csv`、`brk-history.csv`、`btc-history.csv`）为简化起见使用无标题格式。
 
 ## 项目结构
 
 ```
-sp500-minimal-L/
+stocks-minimal-L/
 ├── stocks-minimal-L.py          # 主分析脚本
 ├── README.md                    # 文档
 ├── requirements.txt             # Python依赖
 ├── data/                        # 数据文件夹
 │   ├── sp500-history.csv       # 标普500历史收益率
 │   ├── ndsq100-history.csv     # 纳斯达克100历史收益率
-│   └── brk-history.csv         # 伯克希尔哈撒韦历史收益率
+│   ├── brk-history.csv         # 伯克希尔哈撒韦历史收益率
+│   └── btc-history.csv         # 比特币历史收益率
 └── report.html                  # 生成的HTML报告（运行后）
 ```
 
