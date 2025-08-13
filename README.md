@@ -1,75 +1,159 @@
-# S&P 500 Minimal L Analysis Script
+# 股票最小L分析脚本
 
-This script analyzes S&P 500 annual returns using historical baselines to perform two main tasks:
+原始代码分叉自 https://github.com/xiaolai/sp500-minimal-L
 
-## Tasks
+该脚本分析标普500、纳斯达克100或伯克希尔哈撒韦的年度收益率，使用历史基准线执行两个主要任务：
 
-1. **Task 1**: Find the minimal L such that the worst L-year cumulative return is ≥ 0 (within tolerance)
-2. **Task 2**: For given τ values, find the minimal L such that max CAGR - min CAGR ≤ τ (within tolerance)
+## 任务
 
-## Data Sources
+1. **任务1**：找到最小的L，使得最差的L年累计收益率≥0（在容差范围内）
+2. **任务2**：对于给定的τ值，找到最小的L，使得最大年化收益率 - 最小年化收益率 ≤ τ（在容差范围内）
 
-The script supports CSV data sources in order of preference:
+## 数据源
 
-1. **Local history.csv**: First tries to load a local file named "history.csv" in the current directory
-2. **Remote CSV**: If local file not found, attempts to load from a CSV URL (e.g., Slickcharts)
-3. **User-provided local CSV**: If remote download fails, prompts user to provide a local CSV file path
+脚本支持三种不同的指数/股票：
 
-## Installation
+1. **标普500** (`data/sp500-history.csv`)：默认选项，数据从1926年至今
+2. **纳斯达克100** (`data/ndsq100-history.csv`)：数据从1986年至今  
+3. **伯克希尔哈撒韦** (`data/brk-history.csv`)：数据从1981年至今
+
+对于每个数据源，脚本将：
+1. 首先尝试从 `data/` 文件夹加载相应的本地CSV文件
+2. 对于标普500，可选择尝试远程CSV URL（如Slickcharts）
+3. 如果两者都失败，提示用户提供本地CSV文件路径
+
+## 安装
 
 ```bash
 pip3 install -r requirements.txt
 ```
 
-## Usage
+## 使用方法
 
-### Basic usage (uses default CSV URL):
+### 基本用法（分析所有三个数据源）：
 ```bash
-python3 sp500-minimal-L.py
+python3 stocks-minimal-L.py
 ```
 
-### With custom parameters:
+### 仅分析标普500：
 ```bash
-python3 sp500-minimal-L.py \
+python3 stocks-minimal-L.py --data-source sp500
+```
+
+### 仅分析纳斯达克100：
+```bash
+python3 stocks-minimal-L.py --data-source nasdaq100
+```
+
+### 仅分析伯克希尔哈撒韦：
+```bash
+python3 stocks-minimal-L.py --data-source brk
+```
+
+### 使用自定义参数分析特定数据源：
+```bash
+python3 stocks-minimal-L.py \
+  --data-source sp500 \
   --baselines 1926 1957 1972 1984 \
   --taus 0.005 0.01 0.015 \
   --tol 1e-9
 ```
 
-### Using custom CSV URL:
+### 使用自定义CSV URL（仅限标普500）：
 ```bash
-python3 sp500-minimal-L.py \
+python3 stocks-minimal-L.py \
+  --data-source sp500 \
   --csv-url https://www.slickcharts.com/sp500/returns/history.csv
 ```
 
-## Parameters
+## 参数
 
-- `--csv-url`: CSV URL for remote data (default: Slickcharts URL)
-- `--baselines`: List of baseline years to analyze (default: [1926, 1957, 1972, 1984])
-- `--taus`: List of CAGR dispersion thresholds in decimal (default: [0.005, 0.01, 0.015])
-- `--tol`: Tolerance for comparisons (default: 1e-9)
+- `--data-source`：选择数据源：`sp500`、`nasdaq100`、`brk`或`all`（默认：all）
+- `--csv-url`：远程数据的CSV URL（可选，仅限标普500）
+- `--baselines`：要分析的基准年份列表
+  - 标普500默认：[1926, 1957, 1972, 1984]
+  - 纳斯达克100默认：[1986, 1995, 2000, 2010]
+  - 伯克希尔哈撒韦默认：[1981, 1990, 2000, 2010]
+- `--taus`：年化收益率离散度阈值列表，十进制表示（默认：[0.005, 0.01, 0.015]）
+- `--tol`：比较容差（默认：1e-9）
 
-## Output
+### 基准年份意义
 
-The script outputs analysis results for each baseline year, showing:
-- Data span used
-- Task 1 results (no-loss horizon) including windows tested count
-- Task 2 results for each τ value including windows tested count
+默认基准年份的选择基于数据可用性和重要的历史/经济里程碑：
 
-## Troubleshooting
+#### 标普500基准
+- **1926**：数据起始点，包含大萧条和极端市场事件
+- **1957**：二战后经济繁荣期开始
+- **1972**：布雷顿森林体系崩溃前，高通胀时代开始
+- **1984**：里根经济学时期，现代牛市开始
 
-### HTTP 403 Error
-If you encounter a 403 Forbidden error when trying to access the Slickcharts CSV, this is because the website blocks direct programmatic access. The script will prompt you to provide a local CSV file path as an alternative.
+#### 纳斯达克100基准  
+- **1986**：接近指数创立时间（1985年创立）
+- **1995**：互联网时代和科技革命前夕
+- **2000**：科技泡沫顶峰，最坏情况测试
+- **2010**：金融危机后复苏起点
 
-### CSV File Formats
-The script supports two CSV formats:
+#### 伯克希尔哈撒韦基准
+- **1981**：接近数据可用起点
+- **1990**：沃伦·巴菲特成熟管理期
+- **2000**：千年/科技泡沫时期表现
+- **2010**：金融危机后表现
 
-1. **Header format**: CSV with column headers including "Year" and a return column
-2. **Headless format**: CSV without headers, with year and return values in each row (e.g., `2024,25.02`)
+这些基准有助于分析：
+- 从市场高点开始的表现（最差时机）
+- 从市场低点开始的表现（最佳时机）
+- 跨不同经济周期的长期回报
+- 重大历史事件对长期投资的影响
 
-The local `history.csv` file uses the headless format for simplicity.
+## 输出
 
-## Dependencies
+脚本提供两种类型的输出：
+
+### 1. 控制台输出
+在终端显示的基于文本的结果，显示：
+- 每个基准年份使用的数据范围
+- 任务1结果（无损失期限）包括测试窗口数量
+- 每个τ值的任务2结果包括测试窗口数量
+
+### 2. HTML报告
+自动生成的 `report.html` 文件，具有以下特点：
+- **美观的视觉设计**，现代UI/UX
+- **交互式卡片**，针对每个基准年份和数据源
+- **响应式布局**，适用于桌面和移动设备
+- **突出显示关键指标**（最小L值）
+- **按数据源分色的部分**
+- **专业样式**，适合演示或报告
+
+HTML报告在每次分析后自动生成，并保存为当前目录中的 `report.html`。只需在任何网页浏览器中打开此文件即可查看格式化的结果。
+
+## 故障排除
+
+### HTTP 403错误
+如果在尝试访问Slickcharts CSV时遇到403 Forbidden错误，这是因为网站阻止了直接程序化访问。脚本将提示您提供本地CSV文件路径作为替代方案。
+
+### CSV文件格式
+脚本支持两种CSV格式：
+
+1. **标题格式**：包含列标题的CSV，包括"Year"和收益率列
+2. **无标题格式**：没有标题的CSV，每行包含年份和收益率值（如 `2024,25.02`）
+
+`data/` 文件夹中的所有本地CSV文件（`sp500-history.csv`、`ndsq100-history.csv`、`brk-history.csv`）为简化起见使用无标题格式。
+
+## 项目结构
+
+```
+sp500-minimal-L/
+├── stocks-minimal-L.py          # 主分析脚本
+├── README.md                    # 文档
+├── requirements.txt             # Python依赖
+├── data/                        # 数据文件夹
+│   ├── sp500-history.csv       # 标普500历史收益率
+│   ├── ndsq100-history.csv     # 纳斯达克100历史收益率
+│   └── brk-history.csv         # 伯克希尔哈撒韦历史收益率
+└── report.html                  # 生成的HTML报告（运行后）
+```
+
+## 依赖
 
 - pandas >= 1.3.0
 - numpy >= 1.20.0
