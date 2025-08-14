@@ -242,6 +242,22 @@ class Task2Result:
     spread: float           # decimal
     windows_tested: int
 
+@dataclass
+class Task3Result:
+    L: int
+    best_window_years: Tuple[int, int]
+    best_window_cumret: float  # decimal
+    best_window_cagr: float  # decimal
+    windows_tested: int
+
+@dataclass
+class Task4Result:
+    L: int
+    worst_window_years: Tuple[int, int]
+    worst_window_cumret: float  # decimal
+    worst_window_cagr: float  # decimal
+    windows_tested: int
+
 def task1_no_loss_horizon(years: pd.Series, returns_decimal: pd.Series, tol: float = DEFAULT_TOL) -> Optional[Task1Result]:
     y = years.to_numpy()
     logs = np.log1p(returns_decimal.to_numpy())
@@ -302,6 +318,88 @@ def task2_cagr_dispersion(years: pd.Series, returns_decimal: pd.Series, tau: flo
             )
     return None
 
+def task3_best_window(years: pd.Series, returns_decimal: pd.Series) -> Optional[Task3Result]:
+    """Find the best performing window across all possible window lengths."""
+    y = years.to_numpy()
+    logs = np.log1p(returns_decimal.to_numpy())
+    n = len(logs)
+    pref = np.zeros(n + 1); pref[1:] = np.cumsum(logs)
+    
+    best_overall_val = None
+    best_overall_i = None
+    best_overall_L = None
+    total_windows_tested = 0
+    
+    # Test all possible window lengths from 1 to n years
+    for L in range(1, n + 1):
+        windows_in_L = n - L + 1
+        total_windows_tested += windows_in_L
+        
+        for i in range(0, n - L + 1):
+            s = pref[i + L] - pref[i]
+            cumret = math.expm1(s)
+            
+            if best_overall_val is None or cumret > best_overall_val:
+                best_overall_val = cumret
+                best_overall_i = i
+                best_overall_L = L
+    
+    if best_overall_val is not None:
+        # Calculate CAGR for the best window
+        s = pref[best_overall_i + best_overall_L] - pref[best_overall_i]
+        cagr = math.expm1(s / best_overall_L)
+        
+        return Task3Result(
+            L=best_overall_L,
+            best_window_years=(int(y[best_overall_i]), int(y[best_overall_i + best_overall_L - 1])),
+            best_window_cumret=float(best_overall_val),
+            best_window_cagr=float(cagr),
+            windows_tested=total_windows_tested,
+        )
+    
+    return None
+
+def task4_worst_window(years: pd.Series, returns_decimal: pd.Series) -> Optional[Task4Result]:
+    """Find the worst performing window across all possible window lengths."""
+    y = years.to_numpy()
+    logs = np.log1p(returns_decimal.to_numpy())
+    n = len(logs)
+    pref = np.zeros(n + 1); pref[1:] = np.cumsum(logs)
+    
+    worst_overall_val = None
+    worst_overall_i = None
+    worst_overall_L = None
+    total_windows_tested = 0
+    
+    # Test all possible window lengths from 1 to n years
+    for L in range(1, n + 1):
+        windows_in_L = n - L + 1
+        total_windows_tested += windows_in_L
+        
+        for i in range(0, n - L + 1):
+            s = pref[i + L] - pref[i]
+            cumret = math.expm1(s)
+            
+            if worst_overall_val is None or cumret < worst_overall_val:
+                worst_overall_val = cumret
+                worst_overall_i = i
+                worst_overall_L = L
+    
+    if worst_overall_val is not None:
+        # Calculate CAGR for the worst window
+        s = pref[worst_overall_i + worst_overall_L] - pref[worst_overall_i]
+        cagr = math.expm1(s / worst_overall_L)
+        
+        return Task4Result(
+            L=worst_overall_L,
+            worst_window_years=(int(y[worst_overall_i]), int(y[worst_overall_i + worst_overall_L - 1])),
+            worst_window_cumret=float(worst_overall_val),
+            worst_window_cagr=float(cagr),
+            windows_tested=total_windows_tested,
+        )
+    
+    return None
+
 # ----------------- Reporting -----------------
 
 def fmt_pct(x: Optional[float]) -> str:
@@ -312,7 +410,9 @@ def fmt_span(span: Tuple[int, int]) -> str:
 
 def print_report(baseline: int, span: Tuple[int, int], col_label: str,
                  t1: Optional[Task1Result],
-                 t2s: Sequence[Optional[Task2Result]]):
+                 t2s: Sequence[Optional[Task2Result]],
+                 t3: Optional[Task3Result] = None,
+                 t4: Optional[Task4Result] = None):
     print(f"\n基准年份 {baseline}")
     print(f"- 使用数据范围: {fmt_span(span)}")
     print(f"- 选择列: {col_label}")
@@ -335,17 +435,35 @@ def print_report(baseline: int, span: Tuple[int, int], col_label: str,
                   f"最大 {fmt_span(res.max_window_years)} (年化收益率 {fmt_pct(res.max_window_cagr)}); "
                   f"差值 {fmt_pct(res.spread)}; "
                   f"测试窗口数 = {res.windows_tested}")
+    # Task 3
+    if t3 is not None:
+        print(f"任务3 (最佳窗口): L = {t3.L}年; "
+              f"窗口 {fmt_span(t3.best_window_years)}; "
+              f"累计收益率 = {fmt_pct(t3.best_window_cumret)}; "
+              f"年化收益率 = {fmt_pct(t3.best_window_cagr)}; "
+              f"测试窗口数 = {t3.windows_tested}")
+    # Task 4
+    if t4 is not None:
+        print(f"任务4 (最差窗口): L = {t4.L}年; "
+              f"窗口 {fmt_span(t4.worst_window_years)}; "
+              f"累计收益率 = {fmt_pct(t4.worst_window_cumret)}; "
+              f"年化收益率 = {fmt_pct(t4.worst_window_cagr)}; "
+              f"测试窗口数 = {t4.windows_tested}")
 
 def collect_results(baseline: int, span: Tuple[int, int], col_label: str,
                     t1: Optional[Task1Result],
-                    t2s: Sequence[Optional[Task2Result]]) -> Dict[str, Any]:
+                    t2s: Sequence[Optional[Task2Result]],
+                    t3: Optional[Task3Result] = None,
+                    t4: Optional[Task4Result] = None) -> Dict[str, Any]:
     """Collect analysis results into a dictionary for HTML report."""
     result = {
         'baseline': baseline,
         'span': span,
         'col_label': col_label,
         'task1': None,
-        'task2': []
+        'task2': [],
+        'task3': None,
+        'task4': None
     }
     
     if t1 is not None:
@@ -370,6 +488,24 @@ def collect_results(baseline: int, span: Tuple[int, int], col_label: str,
             })
         else:
             result['task2'].append(None)
+    
+    if t3 is not None:
+        result['task3'] = {
+            'L': t3.L,
+            'best_window_years': t3.best_window_years,
+            'best_window_cumret': t3.best_window_cumret,
+            'best_window_cagr': t3.best_window_cagr,
+            'windows_tested': t3.windows_tested
+        }
+    
+    if t4 is not None:
+        result['task4'] = {
+            'L': t4.L,
+            'worst_window_years': t4.worst_window_years,
+            'worst_window_cumret': t4.worst_window_cumret,
+            'worst_window_cagr': t4.worst_window_cagr,
+            'windows_tested': t4.windows_tested
+        }
     
     return result
 
@@ -516,13 +652,15 @@ def generate_html_report(all_results: Dict[str, List[Dict[str, Any]]], output_fi
     source_icons = {
         'sp500': '📈',
         'nasdaq100': '💻',
-        'brk': '🏦'
+        'brk': '🏦',
+        'btc': '₿'
     }
     
     source_names = {
         'sp500': 'S&P 500',
         'nasdaq100': 'NASDAQ-100',
-        'brk': 'Berkshire Hathaway'
+        'brk': 'Berkshire Hathaway',
+        'btc': 'Bitcoin'
     }
     
     for source, results in all_results.items():
@@ -609,6 +747,72 @@ def generate_html_report(all_results: Dict[str, List[Dict[str, Any]]], output_fi
                     html += '<div class="task-result"><span class="no-data">在范围内未找到L</span></div>'
             html += '</div>'
             
+            # Task 3 results
+            html += '<div class="task-section">'
+            html += '<div class="task-title">任务3: 最佳投资窗口</div>'
+            if result['task3']:
+                t3 = result['task3']
+                html += f'''
+                    <div class="task-result">
+                        <div class="metric">
+                            <span class="metric-label">最佳窗口长度:</span>
+                            <span class="metric-value highlight">{t3['L']} 年</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">时间段:</span>
+                            <span class="metric-value">{t3['best_window_years'][0]}–{t3['best_window_years'][1]}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">累计收益率:</span>
+                            <span class="metric-value">{t3['best_window_cumret']*100:.2f}%</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">年化收益率:</span>
+                            <span class="metric-value">{t3['best_window_cagr']*100:.2f}%</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">测试窗口数:</span>
+                            <span class="metric-value">{t3['windows_tested']:,}</span>
+                        </div>
+                    </div>
+'''
+            else:
+                html += '<div class="task-result"><span class="no-data">无数据</span></div>'
+            html += '</div>'
+            
+            # Task 4 results
+            html += '<div class="task-section">'
+            html += '<div class="task-title">任务4: 最差投资窗口</div>'
+            if result['task4']:
+                t4 = result['task4']
+                html += f'''
+                    <div class="task-result">
+                        <div class="metric">
+                            <span class="metric-label">最差窗口长度:</span>
+                            <span class="metric-value highlight">{t4['L']} 年</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">时间段:</span>
+                            <span class="metric-value">{t4['worst_window_years'][0]}–{t4['worst_window_years'][1]}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">累计收益率:</span>
+                            <span class="metric-value">{t4['worst_window_cumret']*100:.2f}%</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">年化收益率:</span>
+                            <span class="metric-value">{t4['worst_window_cagr']*100:.2f}%</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">测试窗口数:</span>
+                            <span class="metric-value">{t4['windows_tested']:,}</span>
+                        </div>
+                    </div>
+'''
+            else:
+                html += '<div class="task-result"><span class="no-data">无数据</span></div>'
+            html += '</div>'
+            
             html += '</div>\n'
         
         html += '''
@@ -621,7 +825,7 @@ def generate_html_report(all_results: Dict[str, List[Dict[str, Any]]], output_fi
         <div style="text-align: center; color: white; margin-top: 30px; padding: 20px;">
             <p style="opacity: 0.9;">生成时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
             <p style="opacity: 0.7; font-size: 0.9em; margin-top: 10px;">
-                本报告分析历史收益率，寻找避免损失（任务1）和实现稳定收益（任务2）的最佳投资期限。
+                本报告分析历史收益率，执行四项任务：避免损失的最佳期限（任务1）、稳定收益期限（任务2）、最佳投资窗口（任务3）和最差投资窗口（任务4）。
             </p>
         </div>
     </div>
@@ -724,8 +928,10 @@ def main():
             sub = df[(df["Year"] >= start) & (df["Year"] <= end)].reset_index(drop=True)
             t1 = task1_no_loss_horizon(sub["Year"], sub["r"], tol=args.tol)
             t2s = [task2_cagr_dispersion(sub["Year"], sub["r"], tau, tol=args.tol) for tau in args.taus]
-            print_report(b, (start, end), label, t1, t2s)
-            source_results.append(collect_results(b, (start, end), label, t1, t2s))
+            t3 = task3_best_window(sub["Year"], sub["r"])
+            t4 = task4_worst_window(sub["Year"], sub["r"])
+            print_report(b, (start, end), label, t1, t2s, t3, t4)
+            source_results.append(collect_results(b, (start, end), label, t1, t2s, t3, t4))
         
         all_results[data_source] = source_results
     
